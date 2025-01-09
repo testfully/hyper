@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bytes::BytesMut;
 use http::{HeaderMap, Method};
 use httparse::ParserConfig;
@@ -89,6 +91,7 @@ pub(crate) struct Encode<'a, T> {
     keep_alive: bool,
     req_method: &'a mut Option<Method>,
     title_case_headers: bool,
+    origin_header_names: Option<HashMap<String, String>>,
     #[cfg(feature = "server")]
     date_header: bool,
 }

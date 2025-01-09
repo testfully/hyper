@@ -5,6 +5,7 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use std::collections::HashMap;
 
 use crate::rt::{Read, Write};
 use bytes::Bytes;
@@ -112,6 +113,7 @@ pub struct Builder {
     h1_parser_config: ParserConfig,
     h1_writev: Option<bool>,
     h1_title_case_headers: bool,
+    h1_origin_header_names: Option<HashMap<String, String>>,
     h1_preserve_header_case: bool,
     h1_max_headers: Option<usize>,
     #[cfg(feature = "ffi")]
@@ -312,6 +314,7 @@ impl Builder {
             h1_read_buf_exact_size: None,
             h1_parser_config: Default::default(),
             h1_title_case_headers: false,
+            h1_origin_header_names: None,
             h1_preserve_header_case: false,
             h1_max_headers: None,
             #[cfg(feature = "ffi")]
@@ -428,6 +431,12 @@ impl Builder {
         self
     }
 
+    /// Set hashmap for origin header names.
+    pub fn origin_header_names(&mut self, names: HashMap<String, String>) -> &mut Builder {
+        self.h1_origin_header_names = Some(names);
+        self
+    }
+
     /// Set whether to support preserving original header cases.
     ///
     /// Currently, this will record the original cases received, and store them
@@ -538,6 +547,9 @@ impl Builder {
             }
             if opts.h1_title_case_headers {
                 conn.set_title_case_headers();
+            }
+            if let Some(origin_header_names) = opts.h1_origin_header_names {
+                conn.set_origin_header_names(origin_header_names);
             }
             if opts.h1_preserve_header_case {
                 conn.set_preserve_header_case();
