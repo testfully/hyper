@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::mem::MaybeUninit;
 
 #[cfg(feature = "client")]
@@ -1208,7 +1209,7 @@ impl Http1Transaction for Client {
         } else if msg.title_case_headers {
             write_headers_title_case(&msg.head.headers, dst);
         } else {
-            write_headers(&msg.head.headers, dst);
+            write_headers(&msg.head.headers, dst, msg.origin_header_names);
         }
 
         extend(dst, b"\r\n");
@@ -1563,6 +1564,7 @@ fn title_case(dst: &mut Vec<u8>, name: &[u8]) {
 
 pub(crate) fn write_headers_title_case(headers: &HeaderMap, dst: &mut Vec<u8>) {
     for (name, value) in headers {
+        println!("name: {:?}", name.as_str());
         title_case(dst, name.as_str().as_bytes());
         extend(dst, b": ");
         extend(dst, value.as_bytes());
@@ -1570,9 +1572,21 @@ pub(crate) fn write_headers_title_case(headers: &HeaderMap, dst: &mut Vec<u8>) {
     }
 }
 
-pub(crate) fn write_headers(headers: &HeaderMap, dst: &mut Vec<u8>) {
+pub(crate) fn write_headers(headers: &HeaderMap, dst: &mut Vec<u8>, origin_header_names: Option<HashMap<String, String>>) {
     for (name, value) in headers {
-        extend(dst, name.as_str().as_bytes());
+        if let Some(origin_header_names) = &origin_header_names {
+            println!("origin_header_names was provided");
+            if let Some(original_name) = origin_header_names.get(name.as_str()) {
+                println!("writing original name for header: {:?}", original_name);
+                extend(dst, original_name.as_bytes());
+            } else {
+                println!("writing lowercase: {:?}", name.as_str());
+                extend(dst, name.as_str().as_bytes());
+            }
+        } else {
+            println!("origin_header_names was not provided");
+            extend(dst, name.as_str().as_bytes());
+        }
         extend(dst, b": ");
         extend(dst, value.as_bytes());
         extend(dst, b"\r\n");
@@ -2466,6 +2480,7 @@ mod tests {
                 keep_alive: true,
                 req_method: &mut None,
                 title_case_headers: true,
+                origin_header_names: None,
                 #[cfg(feature = "server")]
                 date_header: true,
             },
@@ -2500,6 +2515,7 @@ mod tests {
                 keep_alive: true,
                 req_method: &mut None,
                 title_case_headers: false,
+                origin_header_names: None,
                 #[cfg(feature = "server")]
                 date_header: true,
             },
@@ -2537,6 +2553,7 @@ mod tests {
                 keep_alive: true,
                 req_method: &mut None,
                 title_case_headers: true,
+                origin_header_names: None,
                 #[cfg(feature = "server")]
                 date_header: true,
             },
@@ -2564,6 +2581,7 @@ mod tests {
                 keep_alive: true,
                 req_method: &mut Some(Method::CONNECT),
                 title_case_headers: false,
+                origin_header_names: None,
                 date_header: true,
             },
             &mut vec,
@@ -2595,6 +2613,7 @@ mod tests {
                 keep_alive: true,
                 req_method: &mut None,
                 title_case_headers: true,
+                origin_header_names: None,
                 date_header: true,
             },
             &mut vec,
@@ -2631,6 +2650,7 @@ mod tests {
                 keep_alive: true,
                 req_method: &mut None,
                 title_case_headers: false,
+                origin_header_names: None,
                 date_header: true,
             },
             &mut vec,
@@ -2667,6 +2687,7 @@ mod tests {
                 keep_alive: true,
                 req_method: &mut None,
                 title_case_headers: true,
+                origin_header_names: None,
                 date_header: true,
             },
             &mut vec,
@@ -2704,6 +2725,7 @@ mod tests {
                 keep_alive: true,
                 req_method: &mut None,
                 title_case_headers: true,
+                origin_header_names: None,
                 date_header: false,
             },
             &mut vec,
