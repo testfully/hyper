@@ -4,6 +4,7 @@ use std::future::Future;
 use std::io;
 use std::marker::{PhantomData, Unpin};
 use std::pin::Pin;
+use std::collections::HashMap;
 use std::task::{Context, Poll};
 #[cfg(feature = "server")]
 use std::time::{Duration, Instant};
@@ -72,6 +73,7 @@ where
                 #[cfg(feature = "ffi")]
                 preserve_header_order: false,
                 title_case_headers: false,
+                origin_header_names: None,
                 h09_responses: false,
                 #[cfg(feature = "client")]
                 on_informational: None,
@@ -121,6 +123,10 @@ where
 
     pub(crate) fn set_title_case_headers(&mut self) {
         self.state.title_case_headers = true;
+    }
+
+    pub(crate) fn set_origin_header_names(&mut self, origin_header_names: HashMap<String, String>) {
+        self.state.origin_header_names = Some(origin_header_names);
     }
 
     pub(crate) fn set_preserve_header_case(&mut self) {
@@ -625,6 +631,7 @@ where
                 keep_alive: self.state.wants_keep_alive(),
                 req_method: &mut self.state.method,
                 title_case_headers: self.state.title_case_headers,
+                origin_header_names: self.state.origin_header_names.clone(),
                 #[cfg(feature = "server")]
                 date_header: self.state.date_header,
             },
@@ -735,7 +742,7 @@ where
         match self.state.writing {
             Writing::Body(ref encoder) => {
                 if let Some(enc_buf) =
-                    encoder.encode_trailers(trailers, self.state.title_case_headers)
+                    encoder.encode_trailers(trailers, self.state.title_case_headers, self.state.origin_header_names.clone())
                 {
                     self.io.buffer(enc_buf);
 
@@ -938,6 +945,7 @@ struct State {
     #[cfg(feature = "ffi")]
     preserve_header_order: bool,
     title_case_headers: bool,
+    origin_header_names: Option<HashMap<String, String>>,
     h09_responses: bool,
     /// If set, called with each 1xx informational response received for
     /// the current request. MUST be unset after a non-1xx response is
