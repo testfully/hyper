@@ -1564,7 +1564,6 @@ fn title_case(dst: &mut Vec<u8>, name: &[u8]) {
 
 pub(crate) fn write_headers_title_case(headers: &HeaderMap, dst: &mut Vec<u8>) {
     for (name, value) in headers {
-        println!("name: {:?}", name.as_str());
         title_case(dst, name.as_str().as_bytes());
         extend(dst, b": ");
         extend(dst, value.as_bytes());
@@ -1575,16 +1574,12 @@ pub(crate) fn write_headers_title_case(headers: &HeaderMap, dst: &mut Vec<u8>) {
 pub(crate) fn write_headers(headers: &HeaderMap, dst: &mut Vec<u8>, origin_header_names: Option<HashMap<String, String>>) {
     for (name, value) in headers {
         if let Some(origin_header_names) = &origin_header_names {
-            println!("origin_header_names was provided");
             if let Some(original_name) = origin_header_names.get(name.as_str()) {
-                println!("writing original name for header: {:?}", original_name);
                 extend(dst, original_name.as_bytes());
             } else {
-                println!("writing lowercase: {:?}", name.as_str());
                 extend(dst, name.as_str().as_bytes());
             }
         } else {
-            println!("origin_header_names was not provided");
             extend(dst, name.as_str().as_bytes());
         }
         extend(dst, b": ");
