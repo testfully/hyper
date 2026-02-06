@@ -218,6 +218,22 @@ impl Error {
     }
 
     /// Returns true if the connection closed before a message could complete.
+    ///
+    /// This means that the supplied IO connection reported EOF (closed) while
+    /// hyper's HTTP state indicates more of the message (either request or
+    /// response) needed to be transmitted.
+    ///
+    /// Some cases this could happen (not exhaustive):
+    ///
+    /// - A request is written on a connection, and the next `read` reports
+    ///   EOF (perhaps a server just closed an "idle" connection).
+    /// - A message body is only partially receive before the connection
+    ///   reports EOF.
+    /// - A client writes a request to your server, and then closes the write
+    ///   half while waiting for your response. If you need to support this,
+    ///   consider enabling [`half_close`].
+    ///
+    /// [`half_close`]: crate::server::conn::http1::Builder::half_close()
     pub fn is_incomplete_message(&self) -> bool {
         #[cfg(not(all(any(feature = "client", feature = "server"), feature = "http1")))]
         return false;
@@ -239,6 +255,15 @@ impl Error {
             feature = "ffi"
         ))]
         matches!(self.inner.kind, Kind::User(User::BodyWriteAborted))
+    }
+
+    /// Returns true if the error was caused while calling `AsyncWrite::shutdown()`.
+    pub fn is_shutdown(&self) -> bool {
+        #[cfg(all(feature = "http1", any(feature = "client", feature = "server")))]
+        if matches!(self.inner.kind, Kind::Shutdown) {
+            return true;
+        }
+        false
     }
 
     /// Returns true if the error was caused by a timeout.

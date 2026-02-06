@@ -7,7 +7,7 @@ use std::pin::Pin;
 use std::collections::HashMap;
 use std::task::{Context, Poll};
 #[cfg(feature = "server")]
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::rt::{Read, Write};
 use bytes::{Buf, Bytes};
@@ -224,7 +224,7 @@ where
         #[cfg(feature = "server")]
         if !self.state.h1_header_read_timeout_running {
             if let Some(h1_header_read_timeout) = self.state.h1_header_read_timeout {
-                let deadline = Instant::now() + h1_header_read_timeout;
+                let deadline = self.state.timer.now() + h1_header_read_timeout;
                 self.state.h1_header_read_timeout_running = true;
                 match self.state.h1_header_read_timeout_fut {
                     Some(ref mut h1_header_read_timeout_fut) => {
